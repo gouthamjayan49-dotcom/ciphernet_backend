@@ -23,3 +23,13 @@ CREATE TABLE conversations (
     participant_2 INT REFERENCES users(id),
     created_at TIMESTAMP DEFAULT NOW()
 );
+
+
+CREATE TABLE messages (
+    id SERIAL PRIMARY KEY,
+    conversation_id INT REFERENCES conversations(id),
+    sender_id INT REFERENCES users(id),
+    content TEXT NOT NULL,
+    status VARCHAR(20) DEFAULT 'sent',
+    created_at TIMESTAMP DEFAULT NOW()
+);
