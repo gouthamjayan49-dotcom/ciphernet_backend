@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException,Depends
 from pydantic import BaseModel
 from core.database import database
 from core.security import hash_password, verify_password, create_access_token
@@ -13,6 +13,9 @@ class RegisterRequest(BaseModel):
 class LoginRequest(BaseModel):
     username: str
     password: str
+
+class UpdateProfileRequest(BaseModel):
+    about_user: str
 
 # Register endpoint
 @router.post("/register")
@@ -55,3 +58,11 @@ async def login(request: LoginRequest):
     token = create_access_token({"username": user["username"]})
     
     return {"access_token": token, "token_type": "bearer"}
+
+    @router.patch("/me")
+    async def update_profile(request: UpdateProfileRequest, current_user: str = Depends(get_current_user)):
+        await database.execute(
+            "UPDATE users SET about_user = :about WHERE username = :username",
+            {"about": request.about_user, "username": current_user}
+        )
+        return {"message": "Profile updated!"}
