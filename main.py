@@ -7,7 +7,7 @@ app = FastAPI(title="CipherNet API") #creates an object of FastAPI class
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],              
+    allow_origins=["http://localhost:5173"],              
     allow_credentials=True,           
     allow_methods=["*"],              
     allow_headers=["*"],

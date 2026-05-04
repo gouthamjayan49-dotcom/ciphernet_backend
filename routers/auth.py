@@ -1,7 +1,7 @@
-from fastapi import APIRouter, HTTPException,Depends
+from fastapi import APIRouter, HTTPException,Depends,Response,Request
 from pydantic import BaseModel
 from core.database import database
-from core.security import hash_password, verify_password, create_access_token
+from core.security import hash_password, verify_password, create_access_token,get_current_user
 
 router = APIRouter()
 
@@ -41,8 +41,7 @@ async def register(request: RegisterRequest):
 
 # Login endpoint
 @router.post("/login")
-async def login(request: LoginRequest):
-    # Step 1 - check if user exists
+async def login(request: LoginRequest, response: Response):
     user = await database.fetch_one(
         "SELECT * FROM users WHERE username = :username",
         {"username": request.username}
@@ -50,19 +49,39 @@ async def login(request: LoginRequest):
     if not user:
         raise HTTPException(status_code=400, detail="Username not found!")
     
-    # Step 2 - verify password
     if not verify_password(request.password, user["password"]):
         raise HTTPException(status_code=400, detail="Wrong password!")
     
-    # Step 3 - create JWT token
     token = create_access_token({"username": user["username"]})
     
-    return {"access_token": token, "token_type": "bearer"}
+    response.set_cookie(
+        key="access_token",
+        value=token,
+        httponly=True,
+        secure=False,
+        samesite="lax",
+        max_age=86400
+    )
+    return {"message": "Logged in!", "username": user["username"]}
 
-    @router.patch("/me")
-    async def update_profile(request: UpdateProfileRequest, current_user: str = Depends(get_current_user)):
-        await database.execute(
-            "UPDATE users SET about_user = :about WHERE username = :username",
-            {"about": request.about_user, "username": current_user}
-        )
-        return {"message": "Profile updated!"}
+@router.post("/logout")
+async def logout(response: Response):
+    response.delete_cookie("access_token")
+    return {"message": "Logged out!"}
+
+
+@router.get("/me")
+async def get_me(current_user: str = Depends(get_current_user)):
+    user = await database.fetch_one(
+        "SELECT id, username, about_user, profile_pic_url FROM users WHERE username = :username",
+        {"username": current_user}
+    )
+    return dict(user)
+
+@router.patch("/me")
+async def update_profile(request: UpdateProfileRequest, current_user: str = Depends(get_current_user)):
+    await database.execute(
+        "UPDATE users SET about_user = :about WHERE username = :username",
+        {"about": request.about_user, "username": current_user}
+    )
+    return {"message": "Profile updated!"}

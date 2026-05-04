@@ -1,4 +1,4 @@
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Query
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from jose import JWTError, jwt
 
 from core.config import SECRET_KEY, ALGORITHM
@@ -39,7 +39,10 @@ manager = ConnectionManager()
 # ──────────────────────────────────────────────
 # JWT auth for WebSocket
 # ──────────────────────────────────────────────
-async def authenticate_ws(token: str):
+async def authenticate_ws(websocket: WebSocket):
+    token = websocket.cookies.get("access_token")
+    if not token:
+        return None
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         username = payload.get("username")
@@ -71,9 +74,8 @@ async def authenticate_ws(token: str):
 @router.websocket("/ws")
 async def websocket_endpoint(
     websocket: WebSocket,
-    token: str = Query(...),
 ):
-    user = await authenticate_ws(token)
+    user = await authenticate_ws(websocket)
     if not user:
         await websocket.close(code=4001)
         return
