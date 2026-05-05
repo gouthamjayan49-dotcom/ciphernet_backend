@@ -58,8 +58,8 @@ async def login(request: LoginRequest, response: Response):
         key="access_token",
         value=token,
         httponly=True,
-        secure=False,
-        samesite="lax",
+        secure=True, #changed for cloud
+        samesite="none", #also changed
         max_age=86400
     )
     return {"message": "Logged in!", "username": user["username"]}
