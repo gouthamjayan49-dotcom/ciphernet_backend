@@ -48,3 +48,28 @@ async def search_users(username: str, current_user: str = Depends(get_current_us
         {"username": f"%{username}%"}
     )
     return users
+
+@router.patch("/nickname/{contact_username}")
+async def update_nickname(contact_username: str, nickname: str, current_user: str = Depends(get_current_user)):
+    await database.execute(
+        """
+        UPDATE contacts SET nickname = :nickname
+        WHERE contact_id = (SELECT id FROM users WHERE username = :contact_username)
+        AND owner_id = (SELECT id FROM users WHERE username = :username)
+        """,
+        {"nickname": nickname, "contact_username": contact_username, "username": current_user}
+    )
+    return {"message": "Nickname updated!"}
+
+@router.get("/nickname/{contact_username}")
+async def get_nickname(contact_username: str, current_user: str = Depends(get_current_user)):
+    result = await database.fetch_one(
+        """
+        SELECT c.nickname FROM contacts c
+        JOIN users u ON c.contact_id = u.id
+        WHERE u.username = :contact_username
+        AND c.owner_id = (SELECT id FROM users WHERE username = :username)
+        """,
+        {"contact_username": contact_username, "username": current_user}
+    )
+    return {"nickname": result["nickname"] if result else None}

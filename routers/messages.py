@@ -43,7 +43,15 @@ async def get_conversations(current_user: str = Depends(get_current_user)):
                 WHERE m.conversation_id = c.id
                   AND m.status != 'read'
                   AND m.sender_id != (SELECT id FROM users WHERE username = :username)
-            ) AS unread_count
+            ) AS unread_count,
+            (
+        SELECT ct.nickname FROM contacts ct
+        WHERE ct.owner_id = (SELECT id FROM users WHERE username = :username)
+        AND ct.contact_id = CASE 
+            WHEN u1.username = :username THEN u2.id 
+            ELSE u1.id 
+        END
+    ) AS nickname
         FROM conversations c
         JOIN users u1 ON c.participant_1 = u1.id
         JOIN users u2 ON c.participant_2 = u2.id
